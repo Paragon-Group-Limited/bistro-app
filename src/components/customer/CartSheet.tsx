@@ -166,7 +166,7 @@ export function CartSheet({ isOpen, onClose, onPlaceOrder }: CartSheetProps) {
 
         {/* Footer */}
         {items.length > 0 && (
-          <SheetFooter className="flex-col space-y-4 pt-4 border-t">
+          <SheetFooter className="flex-col !flex-col space-y-4 pt-4 border-t sm:flex-col sm:space-x-0">
             {/* Order Type Selector */}
             <div className="w-full space-y-2">
               <Label className="text-xs font-medium">Order Type</Label>

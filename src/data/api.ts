@@ -32,7 +32,9 @@ function adaptMenuItem(p: MenuProductListItem | MenuProductDetail): MenuItem {
       ? detail.replace(/<[^>]+>/g, '').trim().slice(0, 200)
       : (p.short_details ?? '')
   ) || '';
-  const outOfStock = p.stock !== null && p.stock <= 0;
+  // All products returned by the API are already filtered by hide=0, so they're
+  // menu-visible. Stock validation happens server-side at checkout, not here —
+  // SMA runs with overselling=1 so most products have negative stock historically.
   return {
     id: String(p.id),
     categoryId: String(p.category_id),
@@ -40,7 +42,7 @@ function adaptMenuItem(p: MenuProductListItem | MenuProductDetail): MenuItem {
     description,
     price: p.price,
     image: p.image ?? undefined,
-    isAvailable: !outOfStock,
+    isAvailable: true,
     tags: p.featured ? ['bestseller'] : [],
     prepTimeMinutes: 20, // backend doesn't track per-item; use the global ASAP prep window
     nameBn: p.name_bn,
