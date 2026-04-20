@@ -93,7 +93,7 @@ export interface OrderListItem {
   id: number;
   reference_no: string;
   date: string;
-  online_status: 'placed' | 'ready' | 'completed' | 'cancelled' | 'rejected';
+  online_status: 'placed' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'rejected';
   pickup_time: string;
   is_asap: boolean;
   total_items: number;

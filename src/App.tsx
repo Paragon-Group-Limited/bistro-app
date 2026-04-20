@@ -25,7 +25,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <Toaster position="top-center" richColors />
+        <Toaster position="top-center" richColors offset="56px" />
         <BrowserRouter>
           <Routes>
             {/* Public auth routes */}

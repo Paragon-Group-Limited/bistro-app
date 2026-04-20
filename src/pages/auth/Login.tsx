@@ -86,7 +86,7 @@ export function Login() {
                 {error}
                 {needsVerify && (
                   <div className="mt-2">
-                    <button type="button" onClick={onResend} className="underline text-foreground">
+                    <button type="button" onClick={onResend} className="underline text-foreground py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">
                       Resend verification email
                     </button>
                     {resendStatus === 'sent' && <span className="ml-2 text-xs">✓ Sent — check your inbox.</span>}

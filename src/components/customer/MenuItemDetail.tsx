@@ -1,5 +1,8 @@
 import { Plus, Minus, Clock, Flame, Leaf, Star, Sparkles, UtensilsCrossed } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
 import type { MenuItem } from '@/data/types';
+import { getProductReviews } from '@/data/api';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,11 +29,32 @@ const tagIcons: Record<string, typeof Flame> = {
 
 export function MenuItemDetail({ item, open, onClose }: MenuItemDetailProps) {
   const { items, addItem, updateQuantity } = useCart();
+  const [pendingQty, setPendingQty] = useState(1);
+  const [reviews, setReviews] = useState<Array<{ id: number; rating: number; comment: string | null; customer_name: string; created_at: string }>>([]);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [avgRating, setAvgRating] = useState<number | null>(null);
+
+  // Reset pending qty and fetch reviews when opening a new item
+  useEffect(() => {
+    if (open && item) {
+      setPendingQty(1);
+      getProductReviews(item.id).then(res => {
+        setReviews(res.items);
+        setReviewCount(res.total);
+        if (res.items.length > 0) {
+          const avg = res.items.reduce((sum, r) => sum + r.rating, 0) / res.items.length;
+          setAvgRating(avg);
+        } else {
+          setAvgRating(item.avgRating ?? null);
+        }
+      }).catch(() => { /* non-critical */ });
+    }
+  }, [open, item?.id]);
 
   if (!item) return null;
 
   const cartItem = items.find(i => i.menuItem.id === item.id);
-  const qty = cartItem?.quantity || 0;
+  const inCartQty = cartItem?.quantity || 0;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -82,6 +106,15 @@ export function MenuItemDetail({ item, open, onClose }: MenuItemDetailProps) {
               <p className="text-2xl font-bold font-mono text-primary">৳{item.price}</p>
               <p className="text-[10px] text-muted-foreground uppercase">Price</p>
             </div>
+            {(avgRating !== null || (item.reviewCount ?? 0) > 0) && (
+              <div>
+                <div className="flex items-center justify-center gap-1">
+                  <Star className="w-4 h-4 fill-amber-400 stroke-amber-400" />
+                  <span className="text-lg font-bold">{(avgRating ?? item.avgRating ?? 0).toFixed(1)}</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground uppercase">{reviewCount || item.reviewCount || 0} Reviews</p>
+              </div>
+            )}
             <div>
               <div className="flex items-center justify-center gap-1 text-lg font-bold">
                 <Clock className="w-4 h-4 text-muted-foreground" />
@@ -104,33 +137,90 @@ export function MenuItemDetail({ item, open, onClose }: MenuItemDetailProps) {
             <div className="text-center py-2">
               <p className="text-sm text-muted-foreground italic">Currently unavailable</p>
             </div>
-          ) : qty === 0 ? (
-            <Button onClick={() => { addItem(item); onClose(); }} className="w-full" size="lg">
-              <Plus className="w-4 h-4 mr-2" />
-              Add to Order — ৳{item.price}
-            </Button>
+          ) : inCartQty > 0 ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => updateQuantity(item.id, inCartQty - 1)}
+                  >
+                    <Minus className="w-4 h-4" />
+                  </Button>
+                  <span className="w-10 text-center text-lg font-bold">{inCartQty}</span>
+                  <Button
+                    size="icon"
+                    onClick={() => addItem(item)}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+                <span className="text-lg font-bold font-mono text-primary">
+                  ৳{item.price * inCartQty}
+                </span>
+              </div>
+              <p className="text-xs text-center text-muted-foreground">Already in your cart</p>
+            </div>
           ) : (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div className="space-y-3">
+              <div className="flex items-center justify-center gap-3">
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => updateQuantity(item.id, qty - 1)}
+                  onClick={() => setPendingQty(Math.max(1, pendingQty - 1))}
+                  disabled={pendingQty <= 1}
                 >
                   <Minus className="w-4 h-4" />
                 </Button>
-                <span className="w-10 text-center text-lg font-bold">{qty}</span>
+                <span className="w-10 text-center text-lg font-bold">{pendingQty}</span>
                 <Button
+                  variant="outline"
                   size="icon"
-                  onClick={() => addItem(item)}
+                  onClick={() => setPendingQty(pendingQty + 1)}
                 >
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
-              <span className="text-lg font-bold font-mono text-primary">
-                ৳{item.price * qty}
-              </span>
+              <motion.div whileTap={{ scale: 0.97 }}>
+                <Button
+                  onClick={() => {
+                    for (let i = 0; i < pendingQty; i++) addItem(item);
+                    onClose();
+                  }}
+                  className="w-full"
+                  size="lg"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add {pendingQty} to Order — ৳{item.price * pendingQty}
+                </Button>
+              </motion.div>
             </div>
+          )}
+          {/* Reviews */}
+          {reviews.length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold flex items-center gap-1.5">
+                  <Star className="w-4 h-4 text-amber-400" />
+                  Reviews ({reviewCount})
+                </h4>
+                {reviews.map(r => (
+                  <div key={r.id} className="text-sm space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-amber-500">
+                        {'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">{r.customer_name}</span>
+                    </div>
+                    {r.comment && (
+                      <p className="text-muted-foreground text-xs leading-relaxed">{r.comment}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </DialogContent>

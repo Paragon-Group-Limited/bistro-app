@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import { useAuth, ApiError } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,6 +48,11 @@ export function VerifyEmail() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {state === 'pending' && (
+            <div className="flex justify-center py-2">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
           {state === 'success' && (
             <Button onClick={() => navigate('/login')} className="w-full">Go to login</Button>
           )}

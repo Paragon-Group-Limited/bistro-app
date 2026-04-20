@@ -5,7 +5,7 @@
 // ============================================
 
 import {
-  menuApi, ordersApi, settingsApi,
+  menuApi, ordersApi, settingsApi, reviewsApi,
   type MenuCategory, type MenuProductListItem, type MenuProductDetail,
   type OrderListItem, type OrderDetail,
 } from '@/lib/api';
@@ -54,6 +54,7 @@ function adaptMenuItem(p: MenuProductListItem | MenuProductDetail): MenuItem {
 function adaptStatus(s: OrderListItem['online_status']): OrderStatus {
   switch (s) {
     case 'placed':    return 'pending';
+    case 'preparing': return 'preparing';
     case 'ready':     return 'ready';
     case 'completed': return 'completed';
     case 'cancelled': return 'declined';
@@ -185,3 +186,20 @@ export async function createOrder(
 export async function getPublicSettings() {
   return settingsApi.public();
 }
+
+// Reviews
+export async function getProductReviews(productId: string, page = 1) {
+  const res = await menuApi.productReviews(Number(productId), page, 20);
+  return res;
+}
+
+export async function getReviewableItems(orderId: string) {
+  const res = await ordersApi.reviewable(Number(orderId));
+  return res.items;
+}
+
+export async function submitReview(data: { product_id: number; sale_id: number; rating: number; comment?: string }) {
+  return reviewsApi.create(data);
+}
+
+export { reviewsApi };

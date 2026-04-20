@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2, Clock, ArrowRight, ShoppingBag, Store, Package, Truck } from 'lucide-react';
+import { CheckCircle2, Clock, ArrowRight, ShoppingBag, Store, Package, Truck, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getOrder } from '@/data/api';
@@ -41,6 +41,12 @@ export function OrderConfirmation() {
         <p className="text-muted-foreground text-sm mb-6">
           Your order has been sent to the kitchen
         </p>
+
+        {!order && orderId && (
+          <div className="flex justify-center mb-6">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
 
         {order && (
           <Card className="mb-6 text-left">
@@ -93,15 +99,19 @@ export function OrderConfirmation() {
           </Card>
         )}
 
-        <div className="space-y-2">
-          <Button onClick={() => navigate('/orders')} className="w-full">
-            Track Order
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-          <Button variant="outline" onClick={() => navigate('/')} className="w-full">
-            <ShoppingBag className="w-4 h-4 mr-2" />
-            Order More
-          </Button>
+        <div className="space-y-3">
+          <motion.div whileTap={{ scale: 0.97 }}>
+            <Button onClick={() => navigate('/orders')} className="w-full" size="lg">
+              Track Order
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </motion.div>
+          <motion.div whileTap={{ scale: 0.97 }}>
+            <Button variant="outline" onClick={() => navigate('/')} className="w-full" size="lg">
+              <ShoppingBag className="w-4 h-4 mr-2" />
+              Order More
+            </Button>
+          </motion.div>
         </div>
       </motion.div>
     </div>
