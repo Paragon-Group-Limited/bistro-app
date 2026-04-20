@@ -1,201 +1,132 @@
-import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
-import type { Customer, StaffMember, StaffRole } from '@/data/types';
-import { customers as mockCustomers, staffMembers as mockStaff } from '@/data/mock';
-import {
-  isFirebaseConfigured,
-  setupRecaptcha,
-  sendOtp as firebaseSendOtp,
-  verifyOtp as firebaseVerifyOtp,
-  firebaseSignOut,
-} from '@/lib/firebase';
-import type { ConfirmationResult } from 'firebase/auth';
-import type { RecaptchaVerifier } from 'firebase/auth';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { authApi, type AuthCustomer } from '@/lib/api';
+import { tokenStore, ApiError } from '@/lib/apiClient';
 
-type UserType = 'customer' | 'staff';
+// ============================================
+// Email/password customer auth.
+// JWT is stored in localStorage by apiClient/tokenStore.
+// The exposed `customer` object preserves the original UI's shape (name,
+// totalOrders, totalSpent, createdAt) so the existing pages keep working.
+// ============================================
+
+/** Customer object exposed to the UI. Superset of the original Customer type
+ *  + the new auth fields, so old and new components both work. */
+export interface UICustomer {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  full_name: string;
+  createdAt: string;
+  totalOrders: number;
+  totalSpent: number;
+}
+
+function adaptCustomer(c: AuthCustomer | null): UICustomer | null {
+  if (!c) return null;
+  return {
+    id: String(c.id),
+    name: c.full_name,
+    phone: c.phone,
+    email: c.email,
+    full_name: c.full_name,
+    createdAt: new Date().toISOString(),
+    totalOrders: 0,
+    totalSpent: 0,
+  };
+}
 
 interface AuthState {
   isAuthenticated: boolean;
-  userType: UserType | null;
-  customer: Customer | null;
-  staff: StaffMember | null;
+  customer: UICustomer | null;
+  loading: boolean;
 }
 
 interface AuthContextType extends AuthState {
-  // Customer auth
-  sendOtp: (phone: string) => Promise<boolean>;
-  verifyAndLogin: (otp: string) => Promise<boolean>;
-  registerCustomer: (name: string, phone: string) => Promise<boolean>;
-  // Staff auth
-  loginStaff: (phone: string, password: string) => Promise<{ success: boolean; role?: StaffRole }>;
-  // General
-  logout: () => void;
-  isFirebaseMode: boolean;
-  pendingPhone: string | null;
+  signup: (input: { email: string; password: string; full_name: string; phone: string }) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (token: string, new_password: string) => Promise<void>;
+  resendVerification: (email: string) => Promise<void>;
+  verifyEmail: (token: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'bistro-auth';
+const CUSTOMER_KEY = 'bistro-customer';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try { return JSON.parse(saved); } catch { /* ignore */ }
+    if (!tokenStore.isAuthenticated()) {
+      return { isAuthenticated: false, customer: null, loading: false };
     }
-    return { isAuthenticated: false, userType: null, customer: null, staff: null };
+    const cached = localStorage.getItem(CUSTOMER_KEY);
+    if (cached) {
+      try {
+        return { isAuthenticated: true, customer: adaptCustomer(JSON.parse(cached)), loading: false };
+      } catch { /* fall through */ }
+    }
+    return { isAuthenticated: true, customer: null, loading: true };
   });
 
-  const [pendingPhone, setPendingPhone] = useState<string | null>(null);
-  const confirmationRef = useRef<ConfirmationResult | null>(null);
-  const recaptchaRef = useRef<RecaptchaVerifier | null>(null);
-  const isFirebaseMode = isFirebaseConfigured();
-
+  // Persist the underlying API shape so reload restores cleanly
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
-
-  // ---- Send OTP ----
-  const sendOtp = async (phone: string): Promise<boolean> => {
-    const formattedPhone = phone.startsWith('+') ? phone : `+88${phone}`;
-    setPendingPhone(formattedPhone);
-
-    if (isFirebaseMode) {
-      try {
-        // Set up recaptcha if not already done
-        if (!recaptchaRef.current) {
-          recaptchaRef.current = setupRecaptcha('recaptcha-container');
-        }
-        if (!recaptchaRef.current) return false;
-
-        const confirmation = await firebaseSendOtp(formattedPhone, recaptchaRef.current);
-        confirmationRef.current = confirmation;
-        return true;
-      } catch (err) {
-        console.error('Firebase OTP error:', err);
-        // Reset recaptcha on error so it can be retried
-        recaptchaRef.current = null;
-        return false;
-      }
+    if (state.customer) {
+      const apiShape: AuthCustomer = {
+        id: Number(state.customer.id),
+        email: state.customer.email,
+        full_name: state.customer.full_name,
+        phone: state.customer.phone,
+      };
+      localStorage.setItem(CUSTOMER_KEY, JSON.stringify(apiShape));
     } else {
-      // Mock mode — pretend OTP sent
-      await new Promise(r => setTimeout(r, 500));
-      return true;
+      localStorage.removeItem(CUSTOMER_KEY);
+    }
+  }, [state.customer]);
+
+  const signup: AuthContextType['signup'] = async (input) => {
+    await authApi.signup(input);
+    // Server replies 202 + verification email; user must verify before login
+  };
+
+  const login: AuthContextType['login'] = async (email, password) => {
+    setState(s => ({ ...s, loading: true }));
+    try {
+      const res = await authApi.login(email, password);
+      setState({ isAuthenticated: true, customer: adaptCustomer(res.customer), loading: false });
+    } catch (err) {
+      setState(s => ({ ...s, loading: false }));
+      throw err;
     }
   };
 
-  // ---- Verify OTP & Login ----
-  const verifyAndLogin = async (otp: string): Promise<boolean> => {
-    if (!pendingPhone) return false;
-
-    if (isFirebaseMode) {
-      try {
-        if (!confirmationRef.current) return false;
-        const firebaseUser = await firebaseVerifyOtp(confirmationRef.current, otp);
-        
-        // Look up or create customer
-        let customer = mockCustomers.find(c => c.phone === pendingPhone);
-        if (!customer) {
-          // Phone verified but no account — return false to prompt registration
-          return false;
-        }
-
-        setState({
-          isAuthenticated: true,
-          userType: 'customer',
-          customer,
-          staff: null,
-        });
-        confirmationRef.current = null;
-        return true;
-      } catch (err) {
-        console.error('OTP verification failed:', err);
-        return false;
-      }
-    } else {
-      // Mock mode — any 4-digit code works
-      await new Promise(r => setTimeout(r, 500));
-      if (otp.length !== 4) return false;
-
-      let customer = mockCustomers.find(c => c.phone === pendingPhone);
-      if (!customer) return false;
-
-      setState({
-        isAuthenticated: true,
-        userType: 'customer',
-        customer,
-        staff: null,
-      });
-      return true;
-    }
+  const logout: AuthContextType['logout'] = async () => {
+    await authApi.logout();
+    setState({ isAuthenticated: false, customer: null, loading: false });
   };
 
-  // ---- Register Customer ----
-  const registerCustomer = async (name: string, phone: string): Promise<boolean> => {
-    await new Promise(r => setTimeout(r, 500));
-    const formattedPhone = phone.startsWith('+') ? phone : `+88${phone}`;
-
-    const newCustomer: Customer = {
-      id: `cust-${Date.now()}`,
-      name,
-      phone: formattedPhone,
-      createdAt: new Date().toISOString(),
-      totalOrders: 0,
-      totalSpent: 0,
-    };
-
-    setState({
-      isAuthenticated: true,
-      userType: 'customer',
-      customer: newCustomer,
-      staff: null,
-    });
-    return true;
+  const forgotPassword: AuthContextType['forgotPassword'] = async (email) => {
+    await authApi.forgotPassword(email);
   };
 
-  // ---- Staff Login ----
-  const loginStaff = async (phone: string, password: string): Promise<{ success: boolean; role?: StaffRole }> => {
-    await new Promise(r => setTimeout(r, 500));
-    if (password !== 'bistro123') return { success: false };
-
-    const formattedPhone = phone.startsWith('+') ? phone : `+88${phone}`;
-    const staff = mockStaff.find(s => s.phone === formattedPhone && s.isActive);
-    if (!staff) return { success: false };
-
-    setState({
-      isAuthenticated: true,
-      userType: 'staff',
-      customer: null,
-      staff,
-    });
-    return { success: true, role: staff.role };
+  const resetPassword: AuthContextType['resetPassword'] = async (token, new_password) => {
+    await authApi.resetPassword(token, new_password);
   };
 
-  // ---- Logout ----
-  const logout = () => {
-    setState({ isAuthenticated: false, userType: null, customer: null, staff: null });
-    localStorage.removeItem(STORAGE_KEY);
-    if (isFirebaseMode) firebaseSignOut();
-    confirmationRef.current = null;
-    setPendingPhone(null);
+  const resendVerification: AuthContextType['resendVerification'] = async (email) => {
+    await authApi.resendVerification(email);
+  };
+
+  const verifyEmail: AuthContextType['verifyEmail'] = async (token) => {
+    await authApi.verify(token);
   };
 
   return (
     <AuthContext.Provider
-      value={{
-        ...state,
-        sendOtp,
-        verifyAndLogin,
-        registerCustomer,
-        loginStaff,
-        logout,
-        isFirebaseMode,
-        pendingPhone,
-      }}
+      value={{ ...state, signup, login, logout, forgotPassword, resetPassword, resendVerification, verifyEmail }}
     >
       {children}
-      {/* Invisible reCAPTCHA container */}
-      <div id="recaptcha-container" />
     </AuthContext.Provider>
   );
 }
@@ -205,3 +136,6 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
+
+// Re-export ApiError for callers that catch errors from auth methods
+export { ApiError };

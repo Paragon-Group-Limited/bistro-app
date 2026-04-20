@@ -33,14 +33,17 @@ export function OrdersPage() {
   const navigate = useNavigate();
 
   const handleReorder = async (items: Order['items']) => {
-    // Add each order item back to cart
+    let skipped = 0;
     for (const item of items) {
       const menuItem = await getMenuItem(item.menuItemId);
+      if (!menuItem || !menuItem.isAvailable) { skipped++; continue; }
       for (let i = 0; i < item.quantity; i++) {
         addItem(menuItem, item.notes);
       }
     }
-    // Navigate to menu to show updated cart
+    if (skipped > 0) {
+      toast.warning(`${skipped} item${skipped > 1 ? 's' : ''} no longer available — skipped`);
+    }
     navigate('/');
   };
 
