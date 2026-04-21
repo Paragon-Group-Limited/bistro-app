@@ -1,4 +1,4 @@
-import { X, Minus, Plus, ShoppingBag, Trash2, Store, Package, Truck } from 'lucide-react';
+import { Minus, Plus, ShoppingBag, Trash2, Store, Package, Truck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useCart } from '@/contexts/CartContext';
 import { useState } from 'react';
@@ -24,7 +24,7 @@ interface CartSheetProps {
     tableNumber?: string;
     deliveryAddress?: DeliveryAddress;
     notes: string;
-  }) => void;
+  }) => Promise<void>;
 }
 
 const DELIVERY_FEE = 60;
@@ -54,27 +54,29 @@ export function CartSheet({ isOpen, onClose, onPlaceOrder }: CartSheetProps) {
   const handlePlaceOrder = async () => {
     if (!canPlace()) return;
     setPlacing(true);
-    await new Promise(r => setTimeout(r, 800));
-    onPlaceOrder({
-      orderType,
-      tableNumber: orderType === 'dine-in' ? tableNumber : undefined,
-      deliveryAddress: orderType === 'delivery' ? {
-        fullName: deliveryName,
-        phone: deliveryPhone,
-        address: deliveryAddress,
-        area: deliveryArea,
-        instructions: deliveryInstructions || undefined,
-      } : undefined,
-      notes,
-    });
-    setPlacing(false);
-    setTableNumber('');
-    setNotes('');
-    setDeliveryName('');
-    setDeliveryPhone('');
-    setDeliveryAddress('');
-    setDeliveryArea('');
-    setDeliveryInstructions('');
+    try {
+      await onPlaceOrder({
+        orderType,
+        tableNumber: orderType === 'dine-in' ? tableNumber : undefined,
+        deliveryAddress: orderType === 'delivery' ? {
+          fullName: deliveryName,
+          phone: deliveryPhone,
+          address: deliveryAddress,
+          area: deliveryArea,
+          instructions: deliveryInstructions || undefined,
+        } : undefined,
+        notes,
+      });
+      setTableNumber('');
+      setNotes('');
+      setDeliveryName('');
+      setDeliveryPhone('');
+      setDeliveryAddress('');
+      setDeliveryArea('');
+      setDeliveryInstructions('');
+    } finally {
+      setPlacing(false);
+    }
   };
 
   return (
@@ -116,10 +118,10 @@ export function CartSheet({ isOpen, onClose, onPlaceOrder }: CartSheetProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
+                        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
                         onClick={() => removeItem(cartItem.menuItem.id)}
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
 
@@ -128,18 +130,18 @@ export function CartSheet({ isOpen, onClose, onPlaceOrder }: CartSheetProps) {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="w-7 h-7"
+                          className="w-8 h-8"
                           onClick={() => updateQuantity(cartItem.menuItem.id, cartItem.quantity - 1)}
                         >
-                          <Minus className="w-3 h-3" />
+                          <Minus className="w-3.5 h-3.5" />
                         </Button>
-                        <span className="w-6 text-center text-sm font-semibold">{cartItem.quantity}</span>
+                        <span className="w-7 text-center text-sm font-semibold">{cartItem.quantity}</span>
                         <Button
                           size="icon"
-                          className="w-7 h-7"
+                          className="w-8 h-8"
                           onClick={() => updateQuantity(cartItem.menuItem.id, cartItem.quantity + 1)}
                         >
-                          <Plus className="w-3 h-3" />
+                          <Plus className="w-3.5 h-3.5" />
                         </Button>
                       </div>
 
@@ -166,7 +168,7 @@ export function CartSheet({ isOpen, onClose, onPlaceOrder }: CartSheetProps) {
 
         {/* Footer */}
         {items.length > 0 && (
-          <SheetFooter className="flex-col space-y-4 pt-4 border-t">
+          <SheetFooter className="flex-col !flex-col space-y-4 pt-4 border-t sm:flex-col sm:space-x-0">
             {/* Order Type Selector */}
             <div className="w-full space-y-2">
               <Label className="text-xs font-medium">Order Type</Label>
@@ -309,14 +311,16 @@ export function CartSheet({ isOpen, onClose, onPlaceOrder }: CartSheetProps) {
             </div>
 
             {/* Place Order */}
-            <Button
-              onClick={handlePlaceOrder}
-              disabled={!canPlace() || placing}
-              className="w-full"
-              size="lg"
-            >
-              {placing ? 'Placing Order...' : 'Place Order'}
-            </Button>
+            <motion.div whileTap={{ scale: 0.97 }}>
+              <Button
+                onClick={handlePlaceOrder}
+                disabled={!canPlace() || placing}
+                className="w-full"
+                size="lg"
+              >
+                {placing ? 'Placing Order...' : 'Place Order'}
+              </Button>
+            </motion.div>
           </SheetFooter>
         )}
       </SheetContent>

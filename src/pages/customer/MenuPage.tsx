@@ -13,6 +13,7 @@ import { getCategories, getMenuItems, createOrder } from '@/data/api';
 import type { Category, MenuItem } from '@/data/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
@@ -46,6 +47,9 @@ export function MenuPage() {
       setCategories(cats);
       setMenuItems(items);
       if (cats.length > 0) setActiveCategory(cats[0].id);
+    }).catch(() => {
+      toast.error('Could not load the menu. Pull down to refresh.');
+    }).finally(() => {
       setLoading(false);
     });
   }, []);
@@ -92,17 +96,22 @@ export function MenuPage() {
     deliveryAddress?: import('@/data/types').DeliveryAddress;
     notes: string;
   }) => {
-    const customerId = customer?.id || 'cust-guest';
-    const customerName = customer?.name || 'Guest';
-    const order = await createOrder(customerId, customerName, items, {
-      orderType: options.orderType,
-      tableNumber: options.tableNumber,
-      deliveryAddress: options.deliveryAddress,
-      notes: options.notes,
-    });
-    clearCart();
-    setCartOpen(false);
-    navigate(`/order-confirmed?id=${order.id}`);
+    try {
+      const customerId = customer?.id || 'cust-guest';
+      const customerName = customer?.name || 'Guest';
+      const order = await createOrder(customerId, customerName, items, {
+        orderType: options.orderType,
+        tableNumber: options.tableNumber,
+        deliveryAddress: options.deliveryAddress,
+        notes: options.notes,
+      });
+      clearCart();
+      setCartOpen(false);
+      navigate(`/order-confirmed?id=${order.id}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to place order';
+      toast.error(message);
+    }
   };
 
   return (
@@ -179,9 +188,11 @@ export function MenuPage() {
                 <AnimatePresence>
                   {totalItems > 0 && (
                     <motion.span
+                      key={totalItems}
                       initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
+                      animate={{ scale: [1.25, 1] }}
                       exit={{ scale: 0 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 15 }}
                       className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full
                         bg-primary text-primary-foreground text-[10px] font-bold
                         flex items-center justify-center"
@@ -201,7 +212,7 @@ export function MenuPage() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search menu..."
-              className="pl-9 h-9"
+              className="pl-9 h-10"
             />
             {searchQuery && (
               <Button
@@ -432,6 +443,7 @@ export function MenuPage() {
             exit={{ y: 100, opacity: 0 }}
             className="fixed bottom-0 left-0 right-0 z-30 p-4"
           >
+            <motion.div whileTap={{ scale: 0.98 }}>
             <Button
               onClick={() => setCartOpen(true)}
               className="w-full max-w-2xl mx-auto h-14 rounded-xl flex items-center justify-between px-6"
@@ -445,6 +457,7 @@ export function MenuPage() {
               </div>
               <span className="font-mono font-bold text-lg">৳{subtotal}</span>
             </Button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

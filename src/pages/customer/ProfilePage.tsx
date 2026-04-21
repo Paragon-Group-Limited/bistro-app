@@ -115,14 +115,16 @@ export function ProfilePage() {
           </Card>
 
           {/* Logout */}
-          <Button
-            variant="outline"
-            onClick={handleLogout}
-            className="w-full mt-4 text-destructive hover:text-destructive"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Log Out
-          </Button>
+          <motion.div whileTap={{ scale: 0.97 }} className="mt-4">
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              className="w-full text-destructive hover:text-destructive"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Log Out
+            </Button>
+          </motion.div>
         </motion.div>
       </main>
     </div>

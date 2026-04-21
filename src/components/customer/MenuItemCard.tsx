@@ -29,6 +29,7 @@ export function MenuItemCard({ item, index, onSelect }: MenuItemCardProps) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04, duration: 0.3 }}
+      style={{ willChange: 'opacity, transform' }}
     >
       <Card className={`overflow-hidden transition-all duration-200 cursor-pointer
         ${!item.isAvailable ? 'opacity-50 pointer-events-none' : 'hover:shadow-md hover:border-primary/20'}
@@ -91,29 +92,31 @@ export function MenuItemCard({ item, index, onSelect }: MenuItemCardProps) {
             {!item.isAvailable ? (
               <span className="text-xs text-muted-foreground italic">Unavailable</span>
             ) : qty === 0 ? (
-              <Button size="sm" onClick={() => addItem(item)} className="gap-1">
-                <Plus className="w-4 h-4" />
-                Add
-              </Button>
+              <motion.div whileTap={{ scale: 0.93 }}>
+                <Button size="sm" onClick={() => addItem(item)} className="gap-1 min-h-[36px]">
+                  <Plus className="w-4 h-4" />
+                  Add
+                </Button>
+              </motion.div>
             ) : (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <Button
                   variant="outline"
                   size="icon"
-                  className="w-8 h-8"
+                  className="w-9 h-9"
                   onClick={() => updateQuantity(item.id, qty - 1)}
                 >
-                  <Minus className="w-3 h-3" />
+                  <Minus className="w-3.5 h-3.5" />
                 </Button>
                 <span className="w-8 text-center text-sm font-semibold text-primary">
                   {qty}
                 </span>
                 <Button
                   size="icon"
-                  className="w-8 h-8"
+                  className="w-9 h-9"
                   onClick={() => addItem(item)}
                 >
-                  <Plus className="w-3 h-3" />
+                  <Plus className="w-3.5 h-3.5" />
                 </Button>
               </div>
             )}

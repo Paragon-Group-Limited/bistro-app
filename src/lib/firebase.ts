@@ -1,9 +1,3 @@
-// ============================================
-// Firebase Configuration
-// Replace these values with your Firebase project config.
-// Get them from: Firebase Console → Project Settings → General → Your Apps → Web App
-// ============================================
-
 import { initializeApp } from 'firebase/app';
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from 'firebase/auth';
 
@@ -16,42 +10,29 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
 };
 
-// Only initialize if config is present
 const app = firebaseConfig.apiKey ? initializeApp(firebaseConfig) : null;
 const auth = app ? getAuth(app) : null;
 
-// Check if Firebase is configured
 export function isFirebaseConfigured(): boolean {
   return !!firebaseConfig.apiKey;
 }
 
-// Set up invisible reCAPTCHA verifier
 export function setupRecaptcha(buttonId: string): RecaptchaVerifier | null {
   if (!auth) return null;
-  
-  const verifier = new RecaptchaVerifier(auth, buttonId, {
-    size: 'invisible',
-    callback: () => {
-      // reCAPTCHA solved
-    },
-  });
+  const verifier = new RecaptchaVerifier(auth, buttonId, { size: 'invisible', callback: () => {} });
   return verifier;
 }
 
-// Send OTP to phone number
 export async function sendOtp(
   phoneNumber: string,
   recaptchaVerifier: RecaptchaVerifier
 ): Promise<ConfirmationResult> {
   if (!auth) throw new Error('Firebase not configured');
-  
-  // Ensure phone number has country code
+  // Default to Bangladesh country code (+88) if none provided
   const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+88${phoneNumber}`;
-  
   return signInWithPhoneNumber(auth, formattedPhone, recaptchaVerifier);
 }
 
-// Verify OTP code
 export async function verifyOtp(
   confirmationResult: ConfirmationResult,
   code: string
@@ -60,9 +41,6 @@ export async function verifyOtp(
   return result.user;
 }
 
-// Sign out
 export async function firebaseSignOut() {
   if (auth) await auth.signOut();
 }
-
-export { auth };

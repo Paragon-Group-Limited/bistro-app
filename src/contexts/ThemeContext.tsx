@@ -12,7 +12,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('bistro-theme');
-    return (saved as Theme) || 'dark';
+    return saved === 'light' || saved === 'dark' ? saved : 'dark';
   });
 
   useEffect(() => {
