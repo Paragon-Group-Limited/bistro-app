@@ -1,0 +1,66 @@
+# Rendered by the nginx image's entrypoint (envsubst): only ${BACKEND_URL} is substituted.
+# BACKEND_URL = base URL of the SMA PHP app, no trailing slash, e.g.
+#   http://app/bistro                (docker network)  or  https://admin.example.com/bistro
+
+map $http_x_forwarded_proto $fwd_proto {
+  default $http_x_forwarded_proto;
+  ''      $scheme;
+}
+
+server {
+  listen 80;
+  server_name _;
+  root /usr/share/nginx/html;
+  index index.html;
+
+  server_tokens off;
+  client_max_body_size 5m;
+
+  gzip on;
+  gzip_vary on;
+  gzip_min_length 1024;
+  gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header X-Frame-Options "SAMEORIGIN" always;
+  add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+  location = /healthz {
+    access_log off;
+    default_type text/plain;
+    return 200 "ok\n";
+  }
+
+  location /api/ {
+    proxy_pass ${BACKEND_URL}/api/;
+    proxy_ssl_server_name on;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $fwd_proto;
+    proxy_read_timeout 30s;
+  }
+
+  location /uploads/ {
+    proxy_pass ${BACKEND_URL}/assets/uploads/;
+    proxy_ssl_server_name on;
+    proxy_set_header Host $host;
+    expires 7d;
+  }
+
+  # Vite emits content-hashed filenames under /assets/
+  location /assets/ {
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+    add_header X-Content-Type-Options "nosniff" always;
+    try_files $uri =404;
+  }
+
+  # SPA fallback; never cache the shell so new deploys are picked up
+  location / {
+    add_header Cache-Control "no-cache";
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    try_files $uri /index.html;
+  }
+}

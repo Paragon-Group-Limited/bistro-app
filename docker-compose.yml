@@ -1,14 +1,17 @@
+# Local: joins the backend's compose network (D:\laragon\www\bistro, service `app`).
+# For a server use docker-compose.prod.yml.
 services:
   web:
     build: .
     ports:
       - "5190:80"
+    environment:
+      BACKEND_URL: http://app/bistro
     networks:
       - default
       - backend
 
 networks:
   backend:
-    # Compose network of the PHP backend (D:\laragon\www\bistro); its service is `app`.
     name: bistro_default
     external: true
