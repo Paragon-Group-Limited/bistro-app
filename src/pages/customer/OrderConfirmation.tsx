@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2, Clock, ArrowRight, ShoppingBag, Store, Package, Truck, Loader2 } from 'lucide-react';
+import { CheckCircle2, Clock, ArrowRight, ShoppingBag, Store, Package, Truck, Loader2, MessageSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getOrder } from '@/data/api';
@@ -66,6 +66,15 @@ export function OrderConfirmation() {
                   Just now
                 </div>
               </div>
+              {order.staffMessage && (
+                <div className="rounded-lg bg-primary/10 border border-primary/20 p-2.5 flex gap-2">
+                  <MessageSquare className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Message from restaurant</p>
+                    <p className="text-sm">{order.staffMessage}</p>
+                  </div>
+                </div>
+              )}
               <Separator />
               {order.items.map(item => (
                 <div key={item.id} className="flex items-center justify-between text-sm">

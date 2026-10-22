@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
@@ -24,6 +25,7 @@ interface CartSheetProps {
     tableNumber?: string;
     deliveryAddress?: DeliveryAddress;
     notes: string;
+    isUrgent: boolean;
   }) => Promise<void>;
 }
 
@@ -34,6 +36,7 @@ export function CartSheet({ isOpen, onClose, onPlaceOrder }: CartSheetProps) {
   const [orderType, setOrderType] = useState<OrderType>('dine-in');
   const [tableNumber, setTableNumber] = useState('');
   const [notes, setNotes] = useState('');
+  const [isUrgent, setIsUrgent] = useState(false);
   const [placing, setPlacing] = useState(false);
 
   // Delivery address fields
@@ -66,9 +69,11 @@ export function CartSheet({ isOpen, onClose, onPlaceOrder }: CartSheetProps) {
           instructions: deliveryInstructions || undefined,
         } : undefined,
         notes,
+        isUrgent,
       });
       setTableNumber('');
       setNotes('');
+      setIsUrgent(false);
       setDeliveryName('');
       setDeliveryPhone('');
       setDeliveryAddress('');
@@ -308,6 +313,16 @@ export function CartSheet({ isOpen, onClose, onPlaceOrder }: CartSheetProps) {
                 <span className="text-sm font-medium">Total</span>
                 <span className="text-2xl font-bold font-mono">৳{total}</span>
               </div>
+            </div>
+
+            {/* Urgent */}
+            <div className="w-full flex items-center gap-2">
+              <Checkbox
+                id="urgent"
+                checked={isUrgent}
+                onCheckedChange={checked => setIsUrgent(checked === true)}
+              />
+              <Label htmlFor="urgent" className="text-sm font-medium cursor-pointer">It's Urgent</Label>
             </div>
 
             {/* Place Order */}

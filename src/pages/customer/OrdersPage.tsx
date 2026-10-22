@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Clock, CheckCircle2, XCircle, ChefHat, Package, Store, Truck, Star, Loader2 } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle2, XCircle, ChefHat, Package, Store, Truck, Star, Loader2, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { getCustomerOrders, getMenuItem, getReviewableItems, submitReview } from '@/data/api';
@@ -183,6 +183,16 @@ export function OrdersPage() {
                   {order.status === 'preparing' && '👨‍🍳 Being prepared'}
                   {order.status === 'ready' && '🎉 Ready for pickup!'}
                   {order.status === 'completed' && '✅ Order complete'}
+                </div>
+              </div>
+            )}
+
+            {order.staffMessage && (
+              <div className="rounded-lg bg-primary/10 border border-primary/20 p-2.5 mb-3 flex gap-2">
+                <MessageSquare className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Message from restaurant</p>
+                  <p className="text-sm">{order.staffMessage}</p>
                 </div>
               </div>
             )}

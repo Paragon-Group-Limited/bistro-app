@@ -99,6 +99,7 @@ export interface OrderListItem {
   total_items: number;
   total: number;
   cancellation_requested_at: string | null;
+  staff_message?: string | null;
 }
 
 export interface OrderDetail extends OrderListItem {
@@ -177,7 +178,7 @@ export const settingsApi = {
 // ============================================
 
 export const menuApi = {
-  categories: () => apiRequest<MenuCategory[]>('/menu/categories', { noAuth: true }),
+  categories: () => apiRequest<MenuCategory[]>('/menu/categories'),
   products: (filters: { category_id?: number; search?: string; featured?: boolean; page?: number; page_size?: number } = {}) =>
     apiRequest<PageResult<MenuProductListItem>>('/menu/products', {
       query: {
@@ -187,11 +188,10 @@ export const menuApi = {
         page: filters.page,
         page_size: filters.page_size,
       },
-      noAuth: true,
     }),
-  product: (id: number) => apiRequest<MenuProductDetail>(`/menu/products/${id}`),
+  product:(id: number) => apiRequest<MenuProductDetail>(`/menu/products/${id}`),
   productReviews: (id: number, page = 1, page_size = 20) =>
-    apiRequest<PageResult<ReviewListItem>>(`/menu/products/${id}/reviews`, { query: { page, page_size }, noAuth: true }),
+    apiRequest<PageResult<ReviewListItem>>(`/menu/products/${id}/reviews`, { query: { page, page_size } }),
 };
 
 // ============================================
@@ -202,6 +202,7 @@ export interface PlaceOrderInput {
   items: Array<{ product_id: number; quantity: number; variant_id?: number; note?: string }>;
   pickup: { is_asap: true } | { is_asap?: false; scheduled_at: string };
   note?: string;
+  is_urgent?: boolean;
 }
 
 export interface PlaceOrderResponse {
