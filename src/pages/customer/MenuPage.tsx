@@ -95,6 +95,7 @@ export function MenuPage() {
     tableNumber?: string;
     deliveryAddress?: import('@/data/types').DeliveryAddress;
     notes: string;
+    isUrgent: boolean;
   }) => {
     try {
       const customerId = customer?.id || 'cust-guest';
@@ -104,6 +105,7 @@ export function MenuPage() {
         tableNumber: options.tableNumber,
         deliveryAddress: options.deliveryAddress,
         notes: options.notes,
+        isUrgent: options.isUrgent,
       });
       clearCart();
       setCartOpen(false);

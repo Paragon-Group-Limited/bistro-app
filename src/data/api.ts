@@ -90,6 +90,7 @@ function adaptOrder(o: OrderListItem | OrderDetail, customerName = 'You'): Order
     readyAt:     o.online_status === 'ready' || o.online_status === 'completed' ? o.date : undefined,
     completedAt: o.online_status === 'completed' ? o.date : undefined,
     declineReason: detail?.cancel_reason ?? undefined,
+    staffMessage: o.staff_message || undefined,
   };
 }
 
@@ -166,6 +167,7 @@ export async function createOrder(
     tableNumber?: string;
     deliveryAddress?: DeliveryAddress;
     notes?: string;
+    isUrgent?: boolean;
   },
 ): Promise<Order> {
   const placed = await ordersApi.place({
@@ -176,6 +178,7 @@ export async function createOrder(
     })),
     pickup: { is_asap: true },
     note: options?.notes,
+    is_urgent: options?.isUrgent ?? false,
   });
   // Pull the full record so we can return a fully-shaped Order
   const detail = await ordersApi.get(placed.sale_id);

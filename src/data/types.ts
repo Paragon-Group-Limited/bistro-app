@@ -87,6 +87,7 @@ export interface Order {
   subtotal: number;
   total: number;
   declineReason?: string;
+  staffMessage?: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;
